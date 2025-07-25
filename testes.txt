@@ -27,10 +27,7 @@ public class Livro {
    @Column
    private Double preco;
 
-
 }
-...
-
 
 @Entity
 @Table(name = "Biblioteca")
@@ -62,8 +59,12 @@ Copie o código das classes, cole no quadro abaixo e incremente o código de aco
 
 Resposta:
 
-@OneToMany(mappedBy = "livro", orphanRemoval = true, fetch = FetchType.EAGER)
-   private List<Biblioteca> biblioteca;
+@ManyToOne
+@JoinColumn(name = "biblioteca_id")
+private Biblioteca biblioteca;
+
+@OneToMany(mappedBy = "biblioteca", orphanRemoval = true, fetch = FetchType.EAGER)
+private List<Livro> livros = new ArrayList<>();
 
 ---------------------------------------------------------
 
@@ -72,25 +73,42 @@ Os campos titulo e autor da classe Livro não podem ser nulos;
 O campo responsavel da classe Biblioteca não pode ser nulo;
 O campo titulo da classe Livro deve ser único no banco de dados;
 
-Copie o código das classes, cole no quadro abaixo e incremente o código de acordo com o solicitado pela questão:  (0,5 ponto)
+Copie o código das classes, cole no quadro abaixo e incremente o código de acordo com o solicitado pela questão: 
 
 Resposta:
 
-@NotNull(message = "O titulo é de preenchimento obrigatório")
- @Column(unique = true)
-private String titulo;
-@NotNull(message = "O Autor  é de preenchimento obrigatório")
-private String autor;
+@Entity
+public class Livro {
 
- @Column
-@NotNull(message = "O responsavel  é de preenchimento obrigatório")
-   private String responsavel;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotNull(message = "O título é de preenchimento obrigatório")
+    @Column(unique = true)
+    private String titulo;
+
+    @NotNull(message = "O autor é de preenchimento obrigatório")
+    private String autor;
+
+    private Double preco;
+}
+@Entity
+public class Biblioteca {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotNull(message = "O responsável é de preenchimento obrigatório")
+    private String responsavel;
+}
 
 --------------------------------------------------------------------------
 
 c) Implemente na interface abaixo as seguintes consultas (Aula C25 - Implementando filtros de pesquisa):
 Implemente uma consulta para filtrar todos os livros por autor. Esta consulta deve ignorar caracteres maiúsculos e minúsculos (caixa alta e caixa baixa). (0,5 ponto)
-Implemente uma consulta para filtrar todos os livros por titulo e autor. Esta consulta deve ser exata, ou seja, só irá retornar os livros se o usuário informar exatamente o titulo e o autor do livro. (0,5 ponto)
+Implemente uma consulta para filtrar todos os livros por titulo e autor. Esta consulta deve ser exata, ou seja, só irá retornar os livros se o usuário informar exatamente o titulo e o autor do livro.
 
 Resposta:
 
@@ -110,7 +128,7 @@ public interface LivroRepository extends JpaRepository<Livro, Long> {
 ----------------------------------------------------------------------------------
 d) Considerando o método abaixo, modifique o código para permitir (Aula C22 - Back-end - Controle de Acesso - Parte 1):
 
-Acesso público a rota (endpoint) que altera um Livro em LivroController: (0,5 ponto)
+Acesso público a rota (endpoint) que altera um Livro em LivroController:
 
 @Bean
 public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -121,11 +139,8 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
         .csrf(c -> c.disable())
         .authorizeHttpRequests(authorize -> authorize
 
-
             .requestMatchers(HttpMethod.POST, "/api/livro").permitAll()
               
-
-
             .anyRequest().authenticated()
 
 
@@ -156,18 +171,13 @@ public class Gerente {
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
-
     @Column
     private String nome;
-
 
     @Column
     private LocalDate dataNascimento;
     
 }
-
-...
-
 
 @Entity
 @Table(name = "Departamento")
@@ -182,7 +192,6 @@ public class Departamento {
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
-
     @Column
     private Integer qtdFuncionarios;
 
@@ -193,7 +202,7 @@ public class Departamento {
 a) Implemente um relacionamento de 1 - 1 (um para um) unidirecional entre as classes Gerente e Departamento (C18 - Back-end - Relacionando Entidades) de forma que:
 um departamento tenha um gerente;
 
-Copie o código das classes, cole no quadro abaixo e incremente o código de acordo com o solicitado pela questão:  (0,5 ponto)
+Copie o código das classes, cole no quadro abaixo e incremente o código de acordo com o solicitado pela questão: 
 
 Resposta:
 
@@ -209,14 +218,13 @@ O campo dataNascimento deve ser preenchido com uma data igual ou anterior a data
 
 Resposta:
 
- @Column
+@Column
 @NotBlank(message = "O campo nome  não pode ser nulo ou vazio")
 @Length(max = 100, message = "O campo nome tem que ter entre {max} caracteres")
 
+private String nome;
 
-    private String nome;
-
- @Column
+@Column
 @Past( message = “deve ser preenchido com uma data igual ou anterior a data de hoje”
     private LocalDate dataNascimento;
 
@@ -247,56 +255,58 @@ public interface DepartamentoRepository extends JpaRepository<Departamento, Long
 ---------------------------------------------------------------------------------
 
 d) Considerando o método abaixo, modifique o código para permitir (Aula C22 - Back-end - Controle de Acesso - Parte 1):
-
 Que apenas usuários que tenham o perfil de acesso ADMIN possam acessar a rota (endpoint) que remove um Gerente em GerenteController: (1,0 ponto)
 
 @Bean
 public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-
     http
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        .csrf(c -> c.disable())
+        .csrf(csrf -> csrf.disable())
         .authorizeHttpRequests(authorize -> authorize
 
+            // Permite login
+            .requestMatchers(HttpMethod.POST, "/api/auth").permitAll()
 
-        .requestMatchers(HttpMethod.POST, "/api/auth").permitAll()
+            // Restringe a exclusão de gerente ao perfil ADMIN
+            .requestMatchers(HttpMethod.DELETE, "/api/gerente/**").hasRole("ADMIN")
 
-
+            // Exige autenticação para qualquer outra requisição
             .anyRequest().authenticated()
-
-
         )
-        .sessionManagement((session) -> session
-        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        )            
+        .sessionManagement(session -> session
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        )
         .authenticationProvider(authenticationProvider)
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
 
     return http.build();
 }
 
 
+
 ----------------------------------------------------------------------------------
-03) Conforme estudamos na aula “C21 - Exibindo mensagens no front-end”, explique qual componente utilizamos no projeto do front-end para exibirmos as mensagens para os usuários? Como ele foi utilizado? Dê exemplos. (1,0 ponto)
+03) Conforme estudamos na aula “C21 - Exibindo mensagens no front-end”, explique qual componente utilizamos no projeto do front-end para exibirmos as mensagens para os usuários? Como ele foi utilizado? Dê exemplos.
 
 Resposta:
 
-Utiliazando a bibioteca  <ToastContainer /> , colocando no arquivo app.js e criamos e o diretorio src/views/util,  e criamos um arquivo chamado  util.js onde fica armazenadas  as as menssagens onde podemos escolher a cor e  posicionar as menssagens exibidas em seguida é adiconar as modificações nos arquivos de cliente e entregador e produto.
- 
+Utilizamos o componente <ToastContainer /> da biblioteca react-toastify para exibir mensagens no front-end. Ele é colocado no App.js para permitir que as mensagens apareçam em qualquer parte do sistema.
+Criamos um arquivo chamado util.js na pasta src/views/util, onde ficam funções como notifySuccess() e notifyError(), que mostram mensagens de sucesso ou erro para o usuário.
+Essas mensagens são exibidas com cor personalizada, no canto da tela, e com tempo de duração ajustável. Depois, usamos essas funções nas telas de cliente, produto e entregador para avisar o usuário sobre as ações feitas.
  ----------------------------------------------------------------------------------
 
 04) Na aula “C26 - Envio de e-mails com Templates Thymeleaf”, implementamos um método que foi chamado pelo save da classe ClienteService e que envia um email para o cliente após seu cadastro (código abaixo):
 
-public void enviarEmailConfirmacaoCadastroCliente(Cliente cliente) {
+public void enviarEmailAprovacaoFornecedor(Fornecedor fornecedor, LocalDate dataAtual, Double valorTotal) {
 
-    String assuntoEmail = "Bem vindo ao nosso aplicativo";
+    String assuntoEmail = "Aprovação de cadastro no sistema";
 
     Context params = new Context();
-    params.setVariable("cliente", cliente);
+    params.setVariable("nomeFornecedor", fornecedor.getNome());  // Supondo que Fornecedor tenha o método getNome()
+    params.setVariable("dataAtual", dataAtual.toString());       // Pode ajustar o formato se desejar
+    params.setVariable("valorTotal", valorTotal);
 
-    this.sendMailTemplate("bem_vindo_cliente.html", cliente.getUsuario().getUsername(), assuntoEmail, params);
+    this.sendMailTemplate("aprova_fornecedor.html", fornecedor.getUsuario().getUsername(), assuntoEmail, params);
 }
 
 -----------------------------------------------------------------------------------
@@ -314,14 +324,32 @@ Seguindo esta lógica, ao considerar o HTML abaixo do arquivo aprova_fornecedor.
    </tr>
 </table>
 
-
 Implemente o método abaixo para enviar email para o fornecedor, preenchendo os parâmetros necessários do arquivo aprova_fornecedor.html. (1,0 ponto)
 
 Resposta:
 
-public void enviarEmailAprovacaoFornecedor(Fornecedor fornecedor) {
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
+public void enviarEmailAprovacaoFornecedor(Fornecedor fornecedor) {
+    String assuntoEmail = "Aprovação de cadastro no sistema";
+
+    // Formatar a data atual no formato desejado, ex: dd/MM/yyyy
+    String dataAtualFormatada = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
+    // Valor total autorizado - ajuste conforme sua regra de negócio
+    Double valorTotal = 10000.0;
+
+    // Criar o contexto para o template Thymeleaf com as variáveis necessárias
+    Context params = new Context();
+    params.setVariable("nomeFornecedor", fornecedor.getNome());       // Nome do fornecedor
+    params.setVariable("dataAtual", dataAtualFormatada);             // Data atual formatada
+    params.setVariable("valorTotal", valorTotal);                     // Valor total autorizado
+
+    //Enviar o e-mail usando o template e os dados preenchidos
+    this.sendMailTemplate("aprova_fornecedor.html", fornecedor.getUsuario().getUsername(), assuntoEmail, params);
 }
+
 ----------------------------------------------------------------------------
 05) Conforme estudamos na aula “C30 - Documentando a API com Swagger”, explique qual biblioteca utilizamos no projeto do back-end para documentação da nossa API? Dê exemplos de como documentar uma rota em uma classe Controller. (1,0 ponto)
 
@@ -352,14 +380,12 @@ A utilidade desse arquivo  são as configuracoes do nome do banco e senha que s�
 .env significa "environment" (ambiente).
 
 É um arquivo onde você guarda senhas, URLs, chaves secretas e outras configurações fora do código.
-
 Evita expor informações ensíveis e facilita a troca de ambiente (desenvolvimento, produção etc).
 
 --------------------------------------------------------------------------------- 
 08) Implemente um relacionamento de 1 - N bidirecional entre as classes Categoria e Produto:
 
 Uma categoria pode conter vários produtos;
-
 Um produto pertence a uma única categoria.
 
 ✅ Resposta:
@@ -378,7 +404,6 @@ private Categoria categoria;
 Implemente as seguintes validações:
 
 O campo nome da classe Produto não pode ser nulo, vazio e deve ter no máximo 50 caracteres;
-
 O campo preco da classe Produto não pode ser negativo.
 
 ✅ Resposta:
@@ -395,7 +420,6 @@ private Double preco;
 Implemente no repositório ProdutoRepository:
 
 Uma consulta que filtre produtos por parte do nome, sem considerar letras maiúsculas ou minúsculas. Ordene por preço.
-
 Uma consulta que retorne todos os produtos de uma categoria específica, recebendo o nome da categoria como parâmetro.
 
 ✅ Resposta:
@@ -412,7 +436,6 @@ List<Produto> buscarPorCategoria(@Param("nomeCategoria") String nomeCategoria);
 Implemente um relacionamento de 1 - 1 bidirecional entre as classes Aluno e Carteirinha:
 
 Cada aluno possui uma carteirinha;
-
 A carteirinha pertence a um único aluno.
 
 ✅ Resposta:
@@ -431,7 +454,6 @@ private Aluno aluno;
 Implemente a classe AlunoRequest com as seguintes validações:
 
 O campo nome é obrigatório e deve conter no máximo 100 caracteres;
-
 O campo email deve estar em um formato válido.
 
 ✅ Resposta:
@@ -448,7 +470,6 @@ private String email;
 Modifique o código do SecurityFilterChain para:
 
 Permitir acesso público à rota de cadastro de aluno (POST /api/aluno/cadastrar);
-
 Permitir apenas usuários com o perfil ADMIN acessarem a exclusão de alunos (DELETE /api/aluno/{id}).
 
 ✅ Resposta:
@@ -474,7 +495,6 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
 Na interface AlunoRepository:
 
 Consulta que filtre alunos por nome (parcial e case insensitive), ordenados por data de nascimento;
-
 Consulta que retorne alunos com e-mail @ifpe.edu.br.
 
 ✅ Resposta:
@@ -490,7 +510,6 @@ List<Aluno> buscarPorEmailIfpe();
 Na interface CarteirinhaRepository:
 
 Consulta para carteirinhas emitidas após uma data;
-
 Consulta para carteirinha de aluno com nome exato.
 
 ✅ Resposta:
@@ -506,7 +525,6 @@ Carteirinha buscarPorNomeAluno(@Param("nome") String nome);
 ✅ Exercício 4 – Envio de E-mail com Template Thymeleaf
 🔹 Pergunta a)
 Implemente o método enviarEmailBoasVindas(Aluno aluno) com os campos do template:
-
 nomeAluno, dataCadastro, matricula.
 
 Assunto do e-mail: "Bem-vindo(a) à nossa escola!"
@@ -529,9 +547,7 @@ public void enviarEmailBoasVindas(Aluno aluno) {
 🔹 Pergunta a)
 Explique:
 
-Qual biblioteca usamos para Swagger?
-
-Como documentar um endpoint com @Tag e @Operation?
+Qual biblioteca usamos para Swagger? Como documentar um endpoint com @Tag e @Operation?
 
 ✅ Resposta:
 Biblioteca usada: springdoc-openapi
@@ -559,13 +575,10 @@ public class AlunoController {
 🔹 Pergunta a)
 Explique:
 
-Para que serve o docker-compose.yml?
-
-Por que ele precisa estar no servidor?
+Para que serve o docker-compose.yml? Por que ele precisa estar no servidor?
 
 ✅ Resposta:
 O docker-compose.yml permite configurar todos os containers necessários para a aplicação (ex: banco + back-end).
-
 No servidor, ele garante que a infraestrutura será criada e iniciada com um único comando (docker-compose up), facilitando o deploy.
 -----------------------------------------------------------------------------------------
 🔹 Pergunta b)
@@ -603,3 +616,48 @@ services:
 
 volumes:
   postgres_data:
+  ----------------------------------------------
+
+Exercício 7 – Relacionamento N-N (Muitos para Muitos)
+Classes: Aluno e Curso
+
+a) Implemente um relacionamento N-N entre as classes Aluno e Curso, onde:
+
+Um aluno pode estar matriculado em vários cursos.
+Um curso pode ter vários alunos matriculados.
+Adicione os campos nome em ambas as classes.
+Utilize a anotação @ManyToMany e crie a tabela de junção com @JoinTable.
+
+Resposta 
+
+ @Entity
+public class Aluno {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String nome;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "aluno_curso",
+        joinColumns = @JoinColumn(name = "aluno_id"),
+        inverseJoinColumns = @JoinColumn(name = "curso_id")
+    )
+    private List<Curso> cursos = new ArrayList<>();
+}
+-----------------------------------------------------
+@Entity
+public class Curso {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String nome;
+
+    @ManyToMany(mappedBy = "cursos", fetch = FetchType.EAGER)
+    private List<Aluno> alunos = new ArrayList<>();
+}
+
